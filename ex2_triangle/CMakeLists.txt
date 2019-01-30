@@ -3,16 +3,6 @@ project(triangle)
 
 set(CMAKE_CXX_STANDARD 17)
 
-execute_process(COMMAND xcode-select -p
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        RESULT_VARIABLE xcode_result
-        OUTPUT_VARIABLE xcode_path
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-set(xcode_usr_bin ${xcode_path}/Platforms/MacOSX.platform/usr/bin)
-
-FIND_LIBRARY(APPKIT_LIBRARY AppKit)
-
 add_executable(triangle tng.mm tngsh.metal)
 
 target_link_libraries(triangle ${APPKIT_LIBRARY})
