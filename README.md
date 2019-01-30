@@ -1,2 +1,2 @@
-# ex_metal
+# mt_samples
 Metal examples
