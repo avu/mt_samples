@@ -2,7 +2,7 @@
 #import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
 #import <GLKit/GLKit.h>
-#import "../ex4_mpr/txtng.h"
+#import "mpr.h"
 
 constexpr int W = 800;
 constexpr int H = 800;
@@ -149,6 +149,13 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         pipelineStateDesc.depthAttachmentPixelFormat      = MTLPixelFormatDepth32Float;
 
         pipelineStateDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+        pipelineStateDesc.colorAttachments[0].blendingEnabled = YES;
+        pipelineStateDesc.colorAttachments[0].rgbBlendOperation =   MTLBlendOperationAdd;
+        pipelineStateDesc.colorAttachments[0].alphaBlendOperation = MTLBlendOperationAdd;
+        pipelineStateDesc.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+        pipelineStateDesc.colorAttachments[0].sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+        pipelineStateDesc.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+        pipelineStateDesc.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 
         pipelineStateDesc.sampleCount      = 1;
         pipelineStateDesc.vertexFunction   = vertexProgram;
@@ -292,7 +299,7 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         colorAttachment.texture = cdl.texture;
         //colorAttachment.texture = mainPassFramebuffer;
 
-        colorAttachment.loadAction = MTLLoadActionLoad;
+        colorAttachment.loadAction = MTLLoadActionClear;
         colorAttachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 1.0f);
 
         colorAttachment.storeAction = MTLStoreActionStore;

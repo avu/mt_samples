@@ -1,6 +1,6 @@
 #include <simd/simd.h>
 #include <metal_stdlib>
-#include "mpr.h"
+#include "mstxt.h"
 
 using namespace metal;
 
@@ -35,16 +35,7 @@ fragment half4 frag(
     constexpr sampler textureSampler (mag_filter::linear,
                                   min_filter::linear);
     float4 pixelColor = renderTexture.sample(textureSampler, vert.texCoords);
-    return half4(pixelColor.r, pixelColor.g, pixelColor.b , pixelColor.a);
-}
-
-fragment half4 frag_a(
-        ShaderInOut vert  [[stage_in]],
-        texture2d<float, access::sample> renderTexture [[texture(0)]]
-        )
-{
-    constexpr sampler textureSampler (mag_filter::linear,
-                                  min_filter::linear);
-    float4 pixelColor = renderTexture.sample(textureSampler, vert.texCoords);
+   // if (pixelColor.a < 0.1)
+   //     discard_fragment();
     return half4(pixelColor.r*pixelColor.a, pixelColor.g*pixelColor.a, pixelColor.b*pixelColor.a , pixelColor.a);
 }

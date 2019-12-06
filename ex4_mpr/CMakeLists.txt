@@ -3,7 +3,7 @@ project(txtriangle)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(mpr txtng.mm mpr.metal)
+add_executable(mpr mpr.mm mpr.metal)
 
 target_link_libraries(mpr ${APPKIT_LIBRARY})
 target_link_libraries(mpr "-framework Cocoa")
