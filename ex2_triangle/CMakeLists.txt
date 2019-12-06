@@ -3,7 +3,7 @@ project(triangle)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(triangle tng.mm tngsh.metal)
+add_executable(triangle aarect.mm tngsh.metal)
 
 target_link_libraries(triangle ${APPKIT_LIBRARY})
 target_link_libraries(triangle "-framework Cocoa")
