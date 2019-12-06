@@ -14,10 +14,9 @@ target_link_libraries(triangle "-framework QuartzCore")
 add_custom_command(
         OUTPUT ${PROJECT_BINARY_DIR}/tngsh.metallib_
         WORKING_DIR ${PROJECT_BINARY_DIR}
-        COMMAND ${xcode_usr_bin}/metal -O2 -std=osx-metal1.1 -o tngsh.air
+        COMMAND /usr/bin/xcrun -sdk macosx metal -c -o tngsh.air
         ${CMAKE_SOURCE_DIR}/ex2_triangle/tngsh.metal
-        COMMAND ${xcode_usr_bin}/metal-ar r tngsh.metal-ar tngsh.air
-        COMMAND ${xcode_usr_bin}/metallib -o tngsh.metallib_ tngsh.metal-ar
+        COMMAND /usr/bin/xcrun -sdk macosx metallib -o tngsh.metallib_ tngsh.air
         COMMAND ${CMAKE_COMMAND} -E copy tngsh.metallib_ tngsh.metallib
         MAIN_DEPENDENCY tngsh.metal
         VERBATIM

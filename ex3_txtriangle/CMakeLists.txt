@@ -14,10 +14,9 @@ target_link_libraries(txtriangle "-framework QuartzCore")
 add_custom_command(
         OUTPUT ${PROJECT_BINARY_DIR}/txtngsh.metallib_
         WORKING_DIR ${PROJECT_BINARY_DIR}
-        COMMAND ${xcode_usr_bin}/metal -O2 -std=osx-metal1.1 -o txtngsh.air
+        COMMAND /usr/bin/xcrun -sdk macosx metal -c -o txtngsh.air
         ${CMAKE_SOURCE_DIR}/ex3_txtriangle/txtngsh.metal
-        COMMAND ${xcode_usr_bin}/metal-ar r txtngsh.metal-ar txtngsh.air
-        COMMAND ${xcode_usr_bin}/metallib -o txtngsh.metallib_ txtngsh.metal-ar
+        COMMAND /usr/bin/xcrun -sdk macosx metallib -o txtngsh.metallib_ txtngsh.air
         COMMAND ${CMAKE_COMMAND} -E copy txtngsh.metallib_ txtngsh.metallib
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/ex_res/earth.png ${PROJECT_BINARY_DIR}/earth.png
         MAIN_DEPENDENCY txtngsh.metal
