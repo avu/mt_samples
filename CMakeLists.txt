@@ -9,6 +9,8 @@ execute_process(COMMAND xcode-select -p
         OUTPUT_VARIABLE xcode_path
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+set(METAL /usr/bin/xcrun -sdk macosx metal -c -std=osx-metal2.0)
+set(METALLIB /usr/bin/xcrun -sdk macosx metallib)
 set(xcode_usr_bin ${xcode_path}/Platforms/MacOSX.platform/usr/bin)
 
 FIND_LIBRARY(APPKIT_LIBRARY AppKit)
@@ -20,3 +22,4 @@ add_subdirectory(ex4_mpr)
 add_subdirectory(ex5_aarect)
 add_subdirectory(ex6_mstxt)
 add_subdirectory(ex7_aarect2)
+add_subdirectory(ex8_clip)

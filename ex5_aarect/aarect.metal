@@ -1,6 +1,6 @@
 #include <simd/simd.h>
 #include <metal_stdlib>
-#include "aarect.h"
+#include "triangle.h"
 
 using namespace metal;
 

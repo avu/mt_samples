@@ -14,9 +14,8 @@ target_link_libraries(mstxt "-framework QuartzCore")
 add_custom_command(
         OUTPUT ${PROJECT_BINARY_DIR}/txtngsh.metallib_
         WORKING_DIR ${PROJECT_BINARY_DIR}
-        COMMAND /usr/bin/xcrun -sdk macosx metal -c -o mstxt.air
-        ${CMAKE_SOURCE_DIR}/ex6_mstxt/mstxt.metal
-        COMMAND /usr/bin/xcrun -sdk macosx metallib -o mstxt.metallib_ mstxt.air
+        COMMAND ${METAL} -o mstxt.air ${CMAKE_SOURCE_DIR}/ex6_mstxt/mstxt.metal
+        COMMAND ${METALLIB} -o mstxt.metallib_ mstxt.air
         COMMAND ${CMAKE_COMMAND} -E copy mstxt.metallib_ mstxt.metallib
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/ex_res/earth.png ${PROJECT_BINARY_DIR}/earth.png
         MAIN_DEPENDENCY mstxt.metal

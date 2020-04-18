@@ -14,9 +14,8 @@ target_link_libraries(aarect "-framework QuartzCore")
 add_custom_command(
         OUTPUT ${PROJECT_BINARY_DIR}/aarect.metallib_
         WORKING_DIR ${PROJECT_BINARY_DIR}
-        COMMAND /usr/bin/xcrun -sdk macosx metal -c -o aarect.air
-        ${CMAKE_SOURCE_DIR}/ex5_aarect/aarect.metal
-        COMMAND /usr/bin/xcrun -sdk macosx metallib -o aarect.metallib_ aarect.air
+        COMMAND ${METAL} -o aarect.air ${CMAKE_SOURCE_DIR}/ex5_aarect/aarect.metal
+        COMMAND ${METALLIB} -o aarect.metallib_ aarect.air
         COMMAND ${CMAKE_COMMAND} -E copy aarect.metallib_ aarect.metallib
         MAIN_DEPENDENCY aarect.metal
         VERBATIM
