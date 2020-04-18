@@ -1,7 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
-#import <GLKit/GLKit.h>
 
 constexpr int W = 800;
 constexpr int H = 800;

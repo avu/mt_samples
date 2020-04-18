@@ -28,7 +28,7 @@ struct Vertex {
     id<MTLRenderPipelineState>  _pipelineState;
     id <MTLBuffer>              _uniformBuffer;
     id<MTLBuffer>  			    _vertexBuffer;
-    id<MTLBuffer>  			    _vertexBuffer2;
+    id<MTLBuffer> _vertexBuffer3;
     BOOL 				        _sizeUpdated;
     MTLRenderPassDescriptor    *rpd;
     id<MTLTexture> _earthTxt;
@@ -203,10 +203,10 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
                 Vertex{{0.7, -0.5f, 0}, {0, 0, 255, 255}, {1, 0}}
         };
 
-        _vertexBuffer2 = [cml.device newBufferWithBytes:verts2
+        _vertexBuffer3 = [cml.device newBufferWithBytes:verts2
                                                  length:sizeof(verts2)
                                                 options:MTLResourceCPUCacheModeDefaultCache];
-        if (!_vertexBuffer2) {
+        if (!_vertexBuffer3) {
             printf("ERROR: Failed to create quad vertex buffer.");
             return nil;
         }
@@ -322,7 +322,7 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         // [encoder setViewport:{0, 0, 800, 600, 0, 1}];
         [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:2*3];
 
-        [encoder setVertexBuffer:_vertexBuffer2
+        [encoder setVertexBuffer:_vertexBuffer3
                           offset:0
                          atIndex:MeshVertexBuffer];
 
