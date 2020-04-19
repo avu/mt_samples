@@ -1,7 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
-#import <GLKit/GLKit.h>
 #import "../ex1_main/common.h"
 
 constexpr int W = 800;
@@ -25,6 +24,11 @@ struct Vertex {
     id <MTLLibrary> _shaders;
     id<MTLCommandQueue>         _commandQueue;
     id<MTLRenderPipelineState>  _pipelineState;
+    id<MTLRenderPipelineState>  _stencilRenderState;
+    id<MTLDepthStencilState>    _stencilState;
+    id <MTLTexture>             _stencilData;
+    id <MTLTexture>             _stencilTexture;
+    MTLScissorRect              _clipRect;
     id <MTLBuffer>              _uniformBuffer;
     id<MTLBuffer>  			    _vertexBuffer;
     BOOL 				        _sizeUpdated;
@@ -96,6 +100,20 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
             return nil;
         }
 
+        id<MTLFunction> stencilFragmentProgram = [_shaders newFunctionWithName:@"frag_stencil"];
+        if (!stencilFragmentProgram)
+        {
+            printf("ERROR: Couldn't load fragment function from default library.");
+            return nil;
+        }
+
+        id<MTLFunction> stencilVertexProgram = [_shaders newFunctionWithName:@"vert_stencil"];
+        if (!stencilVertexProgram)
+        {
+            printf("ERROR: Couldn't load vertex function from default library.");
+            return nil;
+        }
+
         MTLRenderPipelineDescriptor *pipelineStateDesc = [MTLRenderPipelineDescriptor new];
 
         if (!pipelineStateDesc)
@@ -125,8 +143,29 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         pipelineStateDesc.fragmentFunction = fragmentProgram;
         pipelineStateDesc.vertexDescriptor = vertDesc;
         _pipelineState = [cml.device newRenderPipelineStateWithDescriptor:pipelineStateDesc
-                                                                 error:&error];
+                                                                    error:&error];
+        MTLDepthStencilDescriptor* stencilDescriptor;
+        stencilDescriptor = [[MTLDepthStencilDescriptor new] autorelease];
+        stencilDescriptor.frontFaceStencil.stencilCompareFunction = MTLCompareFunctionEqual;
+        stencilDescriptor.frontFaceStencil.stencilFailureOperation = MTLStencilOperationKeep;
 
+        stencilDescriptor.backFaceStencil.stencilCompareFunction = MTLCompareFunctionEqual;
+        stencilDescriptor.backFaceStencil.stencilFailureOperation = MTLStencilOperationKeep;
+
+        _stencilState = [cml.device newDepthStencilStateWithDescriptor:stencilDescriptor];
+        MTLRenderPipelineDescriptor * stencilPipelineDesc = [[MTLRenderPipelineDescriptor new] autorelease];
+        stencilPipelineDesc.sampleCount = 1;
+        stencilPipelineDesc.vertexDescriptor = vertDesc;
+        stencilPipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatR8Uint; // A byte buffer format
+        stencilPipelineDesc.vertexFunction = stencilVertexProgram;
+        stencilPipelineDesc.fragmentFunction = stencilFragmentProgram;
+        _stencilRenderState = [cml.device newRenderPipelineStateWithDescriptor:stencilPipelineDesc error:&error];
+
+        
+        _clipRect.x = 0;
+        _clipRect.y = 0;
+        _clipRect.width = 800;
+        _clipRect.height = 600;
 
         if (!_pipelineState) {
             printf("ERROR: Failed acquiring pipeline state descriptor.");
@@ -203,12 +242,78 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
     {
         // Set the metal layer to the drawable size in case orientation or size changes.
         CGSize drawableSize = self.bounds.size;
-
+        CAMetalLayer* cml = static_cast<CAMetalLayer *>(self.layer);
         // Scale drawableSize so that drawable is 1:1 width pixels not 1:1 to points.
         NSScreen* screen = self.window.screen ?: [NSScreen mainScreen];
         drawableSize.width *= screen.backingScaleFactor;
         drawableSize.height *= screen.backingScaleFactor;
 
+        _clipRect.x = static_cast<NSUInteger>(drawableSize.width / 3);
+        _clipRect.y = static_cast<NSUInteger>(drawableSize.height / 3);
+        _clipRect.width = static_cast<NSUInteger>(drawableSize.width / 3);
+        _clipRect.height = static_cast<NSUInteger>(drawableSize.height / 3);
+
+        MTLTextureDescriptor *stencilDataDescriptor =
+                [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatR8Uint
+                 width:drawableSize.width height:drawableSize.height mipmapped:NO];
+        stencilDataDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+        stencilDataDescriptor.storageMode = MTLStorageModePrivate;
+
+        if (_stencilData) {
+            [_stencilData release];
+        }
+
+        _stencilData = [cml.device newTextureWithDescriptor:stencilDataDescriptor];
+
+        MTLTextureDescriptor *stencilTextureDescriptor =
+                [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatStencil8
+                 width:drawableSize.width height:drawableSize.height mipmapped:NO];
+
+        stencilTextureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
+        stencilTextureDescriptor.storageMode = MTLStorageModePrivate;
+        if (_stencilTexture) {
+            [_stencilTexture release];
+        }
+        _stencilTexture = [cml.device newTextureWithDescriptor:stencilTextureDescriptor];
+
+        NSUInteger width = drawableSize.width;
+        NSUInteger height = drawableSize.height;
+        id <MTLBuffer> buff = [cml.device newBufferWithLength:width * height options:MTLResourceStorageModeShared];
+        memset(buff.contents, 0xff, width * height);
+        for (int i = width/2 - 100; i < width/2 + 100; i++) {
+            for (int j = height/2 - 100; j < height/2 + 100; j++) {
+                ((char*)buff.contents)[j*width + i] = 0;
+            }
+        }
+
+        id<MTLCommandBuffer> commandBuf = [_commandQueue commandBuffer];
+        id<MTLBlitCommandEncoder> blitEncoder = [commandBuf blitCommandEncoder];
+
+        [blitEncoder copyFromBuffer:buff
+                       sourceOffset:0
+                  sourceBytesPerRow:width
+                sourceBytesPerImage:width * height
+                         sourceSize:MTLSizeMake(width, height, 1)
+                          toTexture:_stencilData
+                   destinationSlice:0
+                   destinationLevel:0
+                  destinationOrigin:MTLOriginMake(0, 0, 0)];
+
+        [blitEncoder copyFromBuffer:buff
+                       sourceOffset:0
+                  sourceBytesPerRow:width
+                sourceBytesPerImage:width * height
+                         sourceSize:MTLSizeMake(width, height, 1)
+                          toTexture:_stencilTexture
+                   destinationSlice:0
+                   destinationLevel:0
+                  destinationOrigin:MTLOriginMake(0, 0, 0)];
+        [blitEncoder endEncoding];
+
+        [commandBuf commit];
+        [commandBuf waitUntilCompleted];
+
+        [buff release];
         ((CAMetalLayer *)self.layer).drawableSize = drawableSize;
 
         self.sizeUpdated = NO;
@@ -228,7 +333,9 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         colorAttachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 1.0f);
 
         colorAttachment.storeAction = MTLStoreActionStore;
-
+        rpd.stencilAttachment.texture = _stencilTexture;
+        rpd.stencilAttachment.loadAction = MTLLoadActionLoad;
+        rpd.stencilAttachment.storeAction = MTLStoreActionDontCare;
 
         id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
 
@@ -244,6 +351,11 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
 
         // Encode render command.
         id <MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:rpd];
+        [encoder setScissorRect:_clipRect];
+        [encoder setDepthStencilState:_stencilState];
+
+        [encoder setStencilReferenceValue:0xFF];
+
         [encoder pushDebugGroup:@"encode balls"];
         [encoder setFrontFacingWinding:MTLWindingCounterClockwise];
         [encoder setRenderPipelineState:_pipelineState];
