@@ -2,10 +2,12 @@
 #define COMMON_H
 
 #include <simd/simd.h>
+#include <metal_stdlib>
 
 enum VertexAttributes {
     VertexAttributePosition = 0,
     VertexAttributeColor = 1,
+    VertexAttributeTexPos = 2
 };
 
 enum BufferIndex  {
