@@ -353,6 +353,8 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
                  width:drawableSize.width height:drawableSize.height mipmapped:NO];
         stencilDataDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
         stencilDataDescriptor.storageMode = MTLStorageModePrivate;
+        stencilDataDescriptor.sampleCount = 4;
+        stencilDataDescriptor.textureType = MTLTextureType2DMultisample;
 
         if (_stencilData) {
             [_stencilData release];
@@ -366,17 +368,20 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
 
         stencilTextureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
         stencilTextureDescriptor.storageMode = MTLStorageModePrivate;
+        stencilTextureDescriptor.sampleCount = 4;
+        stencilTextureDescriptor.textureType = MTLTextureType2DMultisample;
         if (_stencilTexture) {
             [_stencilTexture release];
         }
         _stencilTexture = [cml.device newTextureWithDescriptor:stencilTextureDescriptor];
 
-        NSUInteger width = drawableSize.width;
+        NSUInteger width = drawableSize.width*4;
         NSUInteger height = drawableSize.height;
         id <MTLBuffer> buff = [cml.device newBufferWithLength:width * height options:MTLResourceStorageModeShared];
-        memset(buff.contents, 0xff, width * height);
-        for (int i = width/2 - 100; i < width/2 + 100; i++) {
-            for (int j = height/2 - 100; j < height/2 + 100; j++) {
+        memset(buff.contents, 0xFF, width * height);
+
+        for (int i = width/2 - 100*4; i < width/2+100*4; i++) {
+            for (int j = height/2-100; j < height/2+100; j++) {
                 ((char*)buff.contents)[j*width + i] = 0;
             }
         }
