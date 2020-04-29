@@ -31,8 +31,8 @@ struct Vertex {
     MTLScissorRect              _clipRect;
     id <MTLBuffer>              _uniformBuffer;
     id<MTLBuffer>  			    _vertexBuffer;
+    id<MTLBuffer>  			    _vertexBuffer1;
     BOOL 				        _sizeUpdated;
-    MTLRenderPassDescriptor    *rpd;
 @public
     CVDisplayLinkRef _displayLink;
     dispatch_semaphore_t 	    _renderSemaphore;
@@ -179,8 +179,17 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
                 Vertex{{0.5, -0.5f, 0}, {0, 0, 255, 255}}
         };
 
+        Vertex verts1[] = {
+                Vertex{{-0.1f, -0.1f, 0}, {255, 0, 0, 255}},
+                Vertex{{0, 0.1f, 0}, {0, 255, 0, 255}},
+                Vertex{{0.1, -0.1f, 0}, {0, 0, 255, 255}}
+        };
+
         _vertexBuffer = [cml.device newBufferWithBytes:verts
                                                 length:sizeof(verts)
+                                               options:MTLResourceCPUCacheModeDefaultCache];
+        _vertexBuffer1 = [cml.device newBufferWithBytes:verts1
+                                                length:sizeof(verts1)
                                                options:MTLResourceCPUCacheModeDefaultCache];
         if (!_vertexBuffer) {
             printf("ERROR: Failed to create quad vertex buffer.");
@@ -279,12 +288,13 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         NSUInteger width = drawableSize.width;
         NSUInteger height = drawableSize.height;
         id <MTLBuffer> buff = [cml.device newBufferWithLength:width * height options:MTLResourceStorageModeShared];
-        memset(buff.contents, 0xff, width * height);
-        for (int i = width/2 - 100; i < width/2 + 100; i++) {
-            for (int j = height/2 - 100; j < height/2 + 100; j++) {
-                ((char*)buff.contents)[j*width + i] = 0;
-            }
-        }
+//        memset(buff.contents, 0xff, width * height);
+        memset(buff.contents, 0, width * height);
+//        for (int i = width/2 - 100; i < width/2 + 100; i++) {
+//            for (int j = height/2 - 100; j < height/2 + 100; j++) {
+//                ((char*)buff.contents)[j*width + i] = 0;
+//            }
+//        }
 
         id<MTLCommandBuffer> commandBuf = [_commandQueue commandBuffer];
         id<MTLBlitCommandEncoder> blitEncoder = [commandBuf blitCommandEncoder];
@@ -324,9 +334,16 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
     if (!cdl) {
         printf("ERROR: Failed to get a valid drawable.");
     } else {
+        MTLRenderPassDescriptor* rpds = [MTLRenderPassDescriptor renderPassDescriptor];
+
+        MTLRenderPassColorAttachmentDescriptor *colorAttachment = rpds.colorAttachments[0];
+        colorAttachment.texture = _stencilTexture;
+
+        colorAttachment.loadAction = MTLLoadActionClear;
+        colorAttachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
         MTLRenderPassDescriptor* rpd = [MTLRenderPassDescriptor renderPassDescriptor];
 
-        MTLRenderPassColorAttachmentDescriptor *colorAttachment = rpd.colorAttachments[0];
+        colorAttachment = rpd.colorAttachments[0];
         colorAttachment.texture = cdl.texture;
 
         colorAttachment.loadAction = MTLLoadActionClear;
@@ -350,7 +367,20 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         // Create a command buffer.
 
         // Encode render command.
-        id <MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:rpd];
+
+        id <MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:rpds];
+        [encoder setRenderPipelineState:_stencilRenderState];
+
+        [encoder setVertexBuffer:_vertexBuffer1
+                          offset:0
+                         atIndex:MeshVertexBuffer];
+        [encoder setVertexBuffer:_uniformBuffer
+                          offset:0 atIndex:FrameUniformBuffer];
+        [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+        [encoder endEncoding];
+
+
+        encoder = [commandBuffer renderCommandEncoderWithDescriptor:rpd];
         [encoder setScissorRect:_clipRect];
         [encoder setDepthStencilState:_stencilState];
 
