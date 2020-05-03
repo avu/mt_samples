@@ -378,6 +378,7 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         NSUInteger width = drawableSize.width*4;
         NSUInteger height = drawableSize.height;
         id <MTLBuffer> buff = [cml.device newBufferWithLength:width * height options:MTLResourceStorageModeShared];
+        id <MTLBuffer> buff1 = [cml.device newBufferWithLength:width * height options:MTLResourceStorageModeShared];
         memset(buff.contents, 0xFF, width * height);
 
         for (int i = width/2 - 100*4; i < width/2+100*4; i++) {
@@ -398,8 +399,24 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
                    destinationSlice:0
                    destinationLevel:0
                   destinationOrigin:MTLOriginMake(0, 0, 0)];
+        [blitEncoder endEncoding];
 
-        [blitEncoder copyFromBuffer:buff
+        [commandBuf commit];
+        [commandBuf waitUntilCompleted];
+
+        commandBuf = [_commandQueue commandBuffer];
+        blitEncoder = [commandBuf blitCommandEncoder];
+        [blitEncoder copyFromTexture:_stencilData
+                         sourceSlice:0
+                         sourceLevel:0
+                        sourceOrigin:MTLOriginMake(0, 0, 0)
+                          sourceSize:MTLSizeMake(width, height, 1)
+                            toBuffer:buff1
+                   destinationOffset:0
+              destinationBytesPerRow:width
+            destinationBytesPerImage:width * height];
+
+        [blitEncoder copyFromBuffer:buff1
                        sourceOffset:0
                   sourceBytesPerRow:width
                 sourceBytesPerImage:width * height
