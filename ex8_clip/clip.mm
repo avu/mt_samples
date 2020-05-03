@@ -246,12 +246,12 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
 
 - (void)update {
     dispatch_semaphore_wait(_renderSemaphore, DISPATCH_TIME_FOREVER);
+    CAMetalLayer* cml = static_cast<CAMetalLayer *>(self.layer);
+    CGSize drawableSize = self.bounds.size;
 
     if (self.sizeUpdated)
     {
         // Set the metal layer to the drawable size in case orientation or size changes.
-        CGSize drawableSize = self.bounds.size;
-        CAMetalLayer* cml = static_cast<CAMetalLayer *>(self.layer);
         // Scale drawableSize so that drawable is 1:1 width pixels not 1:1 to points.
         NSScreen* screen = self.window.screen ?: [NSScreen mainScreen];
         drawableSize.width *= screen.backingScaleFactor;
@@ -337,7 +337,7 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         MTLRenderPassDescriptor* rpds = [MTLRenderPassDescriptor renderPassDescriptor];
 
         MTLRenderPassColorAttachmentDescriptor *colorAttachment = rpds.colorAttachments[0];
-        colorAttachment.texture = _stencilTexture;
+        colorAttachment.texture = _stencilData;
 
         colorAttachment.loadAction = MTLLoadActionClear;
         colorAttachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
@@ -379,6 +379,35 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
         [encoder endEncoding];
 
+        NSUInteger width = _stencilData.width;
+        NSUInteger height = _stencilData.height;
+        id <MTLBuffer> buff = [cml.device newBufferWithLength:width * height options:MTLResourceStorageModeShared];
+
+        id<MTLCommandBuffer> commandBuf = [_commandQueue commandBuffer];
+        id<MTLBlitCommandEncoder> blitEncoder = [commandBuf blitCommandEncoder];
+        [blitEncoder copyFromTexture:_stencilData
+                         sourceSlice:0
+                         sourceLevel:0
+                        sourceOrigin:MTLOriginMake(0, 0, 0)
+                          sourceSize:MTLSizeMake(width, height, 1)
+                            toBuffer:buff
+                   destinationOffset:0
+              destinationBytesPerRow:width
+            destinationBytesPerImage:width * height];
+
+        [blitEncoder copyFromBuffer:buff
+                       sourceOffset:0
+                  sourceBytesPerRow:width
+                sourceBytesPerImage:width * height
+                         sourceSize:MTLSizeMake(width, height, 1)
+                          toTexture:_stencilTexture
+                   destinationSlice:0
+                   destinationLevel:0
+                  destinationOrigin:MTLOriginMake(0, 0, 0)];
+        [blitEncoder endEncoding];
+
+        [commandBuf commit];
+        [commandBuf waitUntilCompleted];
 
         encoder = [commandBuffer renderCommandEncoderWithDescriptor:rpd];
         [encoder setScissorRect:_clipRect];
