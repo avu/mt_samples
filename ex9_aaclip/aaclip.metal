@@ -53,7 +53,7 @@ fragment half4 frag(ShaderInOut in [[stage_in]]) {
 }
 
 fragment unsigned int frag_stencil(StencilShaderInOut in [[stage_in]]) {
-    return in.color;
+    return 0xFF;
 }
 
 vertex TxShaderInOut tx_vert(TxVertexInput in [[stage_in]],
