@@ -226,7 +226,7 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         stencilPipelineDesc.sampleCount = 4;
         //stencilPipelineDesc.sampleCount = 1;
         stencilPipelineDesc.vertexDescriptor = vertDesc;
-        stencilPipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatR8Uint; // A byte buffer format
+        stencilPipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm; // A byte buffer format
         stencilPipelineDesc.vertexFunction = stencilVertexProgram;
         stencilPipelineDesc.fragmentFunction = stencilFragmentProgram;
         _stencilRenderState = [cml.device newRenderPipelineStateWithDescriptor:stencilPipelineDesc error:&error];
@@ -266,9 +266,12 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         };
 
         Vertex verts2[] = {
-                Vertex{{-0.3f, -0.3f, 0}, {255, 0, 0, 255}},
-                Vertex{{0, 0.3f, 0}, {0, 255, 0, 255}},
-                Vertex{{0.3, -0.3f, 0}, {0, 0, 255, 255}}
+                Vertex{{-0.1f, 0.1f, 0.0f}, {255, 0, 0, 255}},
+                Vertex{{0.1f, -0.1f, 0.0f}, {0, 255, 0, 255}},
+                Vertex{{0.1f, 0.1f, 0.0f}, {0, 0, 255, 255}},
+                Vertex{{0.1f, 0.1f, 0.0f}, {255, 0, 0, 255}},
+                Vertex{{-0.1f, 0.1f, 0.0f}, {0, 255, 0, 255}},
+                Vertex{{-0.1f, 0.1f, 0.0f}, {0, 0, 255, 255}}
         };
 
 // Create vertices.
@@ -363,7 +366,7 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         _clipRect.height = static_cast<NSUInteger>(drawableSize.height / 3);
 
         MTLTextureDescriptor *stencilDataDescriptor =
-                [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatR8Uint
+                [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
                                                                    width:drawableSize.width height:drawableSize.height mipmapped:NO];
         stencilDataDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
         stencilDataDescriptor.storageMode = MTLStorageModePrivate;
@@ -391,8 +394,8 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
 
         stencilDataDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
         stencilDataDescriptor.storageMode = MTLStorageModePrivate;
-        stencilDataDescriptor.sampleCount = 4;
-        stencilDataDescriptor.textureType = MTLTextureType2DMultisample;
+        //stencilDataDescriptor.sampleCount = 4;
+        stencilDataDescriptor.textureType = MTLTextureType2D;
 
 
         if (_aaStencilData) {
@@ -419,88 +422,32 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         id <MTLBuffer> buff = [cml.device newBufferWithLength:width * height options:MTLResourceStorageModeShared];
         id <MTLBuffer> buff1 = [cml.device newBufferWithLength:width * height options:MTLResourceStorageModeShared];
         memset(buff.contents, 0xff, width * height);
-//        memset(buff.contents, 0, width * height);
-//        for (int i = width/2 - 100; i < width/2 + 100; i++) {
-//            for (int j = height/2 - 100; j < height/2 + 100; j++) {
-//                ((char*)buff.contents)[j*width + i] = 0;
-//            }
-//        }
-        NSUInteger aaWidth = drawableSize.width*4;
-        id <MTLBuffer> aaBuff = [cml.device newBufferWithLength:aaWidth * height options:MTLResourceStorageModeShared];
-        memset(aaBuff.contents, 0xFF, aaWidth * height);
-
-        for (int i = aaWidth/2 - 100*4; i < aaWidth/2+100*4; i++) {
-            for (int j = height/2-100; j < height/2+100; j++) {
-                ((char*)aaBuff.contents)[j*aaWidth + i] = 0;
+        memset(buff.contents, 0, width * height);
+        for (int i = width/2 - 100; i < width/2 + 100; i++) {
+            for (int j = height/2 - 100; j < height/2 + 100; j++) {
+                ((char*)buff.contents)[j*width + i] = 0;
             }
         }
 
-        id<MTLCommandBuffer> commandBuf = [_commandQueue commandBuffer];
-        id<MTLBlitCommandEncoder> blitEncoder = [commandBuf blitCommandEncoder];
+//        id<MTLCommandBuffer> commandBuf = [_commandQueue commandBuffer];
+//        id<MTLBlitCommandEncoder> blitEncoder = [commandBuf blitCommandEncoder];
 
-        [blitEncoder copyFromBuffer:aaBuff
-                       sourceOffset:0
-                  sourceBytesPerRow:aaWidth
-                sourceBytesPerImage:aaWidth * height
-                         sourceSize:MTLSizeMake(width, height, 1)
-                          toTexture:_aaStencilData
-                   destinationSlice:0
-                   destinationLevel:0
-                  destinationOrigin:MTLOriginMake(0, 0, 0)];
+//        [blitEncoder copyFromBuffer:buff
+//                       sourceOffset:0
+//                  sourceBytesPerRow:width
+//                sourceBytesPerImage:width * height
+//                         sourceSize:MTLSizeMake(width, height, 1)
+//                          toTexture:_stencilData
+//                   destinationSlice:0
+//                   destinationLevel:0
+//                  destinationOrigin:MTLOriginMake(0, 0, 0)];
+//        [blitEncoder endEncoding];
 
-        [blitEncoder copyFromBuffer:aaBuff
-                       sourceOffset:0
-                  sourceBytesPerRow:aaWidth
-                sourceBytesPerImage:aaWidth * height
-                         sourceSize:MTLSizeMake(aaWidth, height, 1)
-                          toTexture:_aaStencilTexture
-                   destinationSlice:0
-                   destinationLevel:0
-                  destinationOrigin:MTLOriginMake(0, 0, 0)];
+//        [commandBuf commit];
+//        [commandBuf waitUntilCompleted];
 
-
-        [blitEncoder copyFromBuffer:buff
-                       sourceOffset:0
-                  sourceBytesPerRow:width
-                sourceBytesPerImage:width * height
-                         sourceSize:MTLSizeMake(width, height, 1)
-                          toTexture:_stencilData
-                   destinationSlice:0
-                   destinationLevel:0
-                  destinationOrigin:MTLOriginMake(0, 0, 0)];
-        [blitEncoder endEncoding];
-
-        [commandBuf commit];
-        [commandBuf waitUntilCompleted];
-
-        commandBuf = [_commandQueue commandBuffer];
-        blitEncoder = [commandBuf blitCommandEncoder];
-        [blitEncoder copyFromTexture:_stencilData
-                         sourceSlice:0
-                         sourceLevel:0
-                        sourceOrigin:MTLOriginMake(0, 0, 0)
-                          sourceSize:MTLSizeMake(width, height, 1)
-                            toBuffer:buff1
-                   destinationOffset:0
-              destinationBytesPerRow:width
-            destinationBytesPerImage:width * height];
-
-        [blitEncoder copyFromBuffer:buff1
-                       sourceOffset:0
-                  sourceBytesPerRow:width
-                sourceBytesPerImage:width * height
-                         sourceSize:MTLSizeMake(width, height, 1)
-                          toTexture:_stencilTexture
-                   destinationSlice:0
-                   destinationLevel:0
-                  destinationOrigin:MTLOriginMake(0, 0, 0)];
-        [blitEncoder endEncoding];
-
-        [commandBuf commit];
-        [commandBuf waitUntilCompleted];
 
         [buff release];
-        [aaBuff release];
         ((CAMetalLayer *)self.layer).drawableSize = drawableSize;
 
         self.sizeUpdated = NO;
@@ -514,9 +461,9 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         MTLRenderPassDescriptor* rpds = [MTLRenderPassDescriptor renderPassDescriptor];
 
         MTLRenderPassColorAttachmentDescriptor *colorAttachment = rpds.colorAttachments[0];
-        colorAttachment.texture = _aaStencilData;
-        colorAttachment.resolveTexture = _stencilData;
-        colorAttachment.storeAction = MTLStoreActionStoreAndMultisampleResolve;
+        colorAttachment.texture = _stencilData;
+//        colorAttachment.resolveTexture = _stencilData;
+        colorAttachment.storeAction = MTLStoreActionStore;
         colorAttachment.loadAction = MTLLoadActionClear;
         colorAttachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -530,10 +477,6 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         colorAttachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
         colorAttachment.storeAction = MTLStoreActionMultisampleResolve;
 
-      //  rpd.stencilAttachment.texture = _aaStencilTexture;
-        rpd.stencilAttachment.texture = _stencilTexture;
-        rpd.stencilAttachment.loadAction = MTLLoadActionLoad;
-        rpd.stencilAttachment.storeAction = MTLStoreActionDontCare;
 
         MTLRenderPassDescriptor* rpd3 = [MTLRenderPassDescriptor renderPassDescriptor];
         colorAttachment = rpd3.colorAttachments[0];
@@ -568,7 +511,7 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
                          atIndex:MeshVertexBuffer];
         [encoder setVertexBuffer:_uniformBuffer
                           offset:0 atIndex:FrameUniformBuffer];
-        [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+        [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
         [encoder endEncoding];
 
         [commandBuffer commit];
@@ -609,7 +552,7 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         commandBuffer = [_commandQueue commandBuffer];
         encoder = [commandBuffer renderCommandEncoderWithDescriptor:rpd];
         [encoder setScissorRect:_clipRect];
-        [encoder setDepthStencilState:_stencilState];
+       // [encoder setDepthStencilState:_stencilState];
 
         [encoder setStencilReferenceValue:0xFF];
 
@@ -632,6 +575,8 @@ static CVReturn OnDisplayLinkFrame(CVDisplayLinkRef displayLink,
         [encoder3 setVertexBuffer:_uniformBuffer3
                            offset:0 atIndex:FrameUniformBuffer];
         [encoder3 setFragmentTexture: _bufTxt atIndex: 0];
+        [encoder3 setFragmentTexture: _stencilData atIndex: 1];
+
 
         [encoder3 drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:2*3];
         [encoder3 endEncoding];
