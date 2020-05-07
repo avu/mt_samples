@@ -27,7 +27,7 @@ struct TxShaderInOut {
 
 struct StencilShaderInOut {
     float4 position [[position]];
-    float4  color;
+    char color;
 };
 
 vertex ShaderInOut vert(VertexInput in [[stage_in]],
@@ -44,7 +44,7 @@ vertex StencilShaderInOut vert_stencil(VertexInput in [[stage_in]],
     StencilShaderInOut out;
     float4 pos4 = float4(in.position, 1.0);
     out.position = uniforms.projectionViewModel * pos4;
-    out.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    out.color = 0xFF;
     return out;
 }
 
@@ -52,8 +52,8 @@ fragment half4 frag(ShaderInOut in [[stage_in]]) {
     return in.color;
 }
 
-fragment  float4 frag_stencil(StencilShaderInOut in [[stage_in]]) {
-    return float4(1.0f, 1.0f, 1.0f, 1.0f);
+fragment unsigned int frag_stencil(StencilShaderInOut in [[stage_in]]) {
+    return in.color;
 }
 
 vertex TxShaderInOut tx_vert(TxVertexInput in [[stage_in]],
@@ -80,4 +80,14 @@ texture2d<float, access::sample> renderTexture [[texture(0)]],
         discard_fragment();
     }
     return half4(pixelColor.r*pixelColor.a, pixelColor.g*pixelColor.a, pixelColor.b*pixelColor.a, 1.0);
+}
+
+kernel void stencil2tex(const device uchar *imageBuffer [[buffer(0)]],
+    device uchar4 *outputBuffer [[buffer(1)]],
+    uint gid [[thread_position_in_grid]])
+{
+    uchar p = imageBuffer[gid];
+    outputBuffer[gid] = uchar4(p, p, p, p);
+    //outputBuffer[gid] = uchar4(255, 255, 255, 255);
+
 }
